@@ -17,8 +17,12 @@ async function extractText(file) {
 }
 
 app.post('/analyze', upload.array('files'), async (req, res) => {
+  console.log('--- /analyze called ---');
+  console.log('OPENAI_API_KEY set:', !!process.env.OPENAI_API_KEY);
+  console.log('Files received:', req.files ? req.files.length : 0);
   try {
     if (!process.env.OPENAI_API_KEY) {
+      console.log('ERROR: No API key!');
       return res.status(500).json({ error: 'OPENAI_API_KEY not set on server' });
     }
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -27,10 +31,12 @@ app.post('/analyze', upload.array('files'), async (req, res) => {
     }
     const parts = [];
     for (const file of req.files) {
+      console.log('Processing file:', file.originalname, file.mimetype);
       const text = await extractText(file);
       parts.push(`=== ${file.originalname} ===\n${text}`);
     }
     const combined = parts.join('\n\n');
+    console.log('Sending to OpenAI, text length:', combined.length);
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
@@ -39,17 +45,21 @@ app.post('/analyze', upload.array('files'), async (req, res) => {
       ],
       response_format: { type: 'json_object' }
     });
+    console.log('OpenAI response received');
     const result = JSON.parse(response.choices[0].message.content);
     res.json(result);
   } catch (err) {
-    console.error(err);
+    console.error('CATCH ERROR:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.get('/', (req, res) => {
-  res.json({ status: 'ok', message: 'UseTasker API is running' });
+  res.json({ status: 'ok', message: 'UseTasker API is running', hasKey: !!process.env.OPENAI_API_KEY });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('Server running on port ' + PORT));
+app.listen(PORT, () => {
+  console.log('Server running on port ' + PORT);
+  console.log('OPENAI_API_KEY present:', !!process.env.OPENAI_API_KEY);
+});
