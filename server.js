@@ -33,14 +33,14 @@ app.post('/analyze', upload.array('files'), async (req, res) => {
     for (const file of req.files) {
       console.log('Processing file:', file.originalname, file.mimetype);
       const text = await extractText(file);
-      parts.push(`=== ${file.originalname} ===\n${text}`);
+      parts.push('=== ' + file.originalname + ' ===\n' + text);
     }
     const combined = parts.join('\n\n');
     console.log('Sending to OpenAI, text length:', combined.length);
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: 'Ты — аналитик требований. Проанализируй документ(ы) и верни строго JSON без комментариев:\n{\n  "project": "Название проекта",\n  "useCases": [\n    {\n      "id": "uc1",\n      "name": "Название сценария",\n      "description": "Описание логики сценария",\n      "tasks": [\n        {\n          "id": "t1",\n          "title": "Название задачи",\n          "type": "business или design или tech",\n          "description": "Что нужно сделать",\n          "source": "Имя файла-источника"\n        }\n      ]\n    }\n  ]\n}\nКлассифицируй задачи: business = бизнес-аналитика, design = UI/UX дизайн, tech = бэкенд/API/БД.' },
+        { role: 'system', content: 'You are a requirements analyst. Analyze the document(s) and return strictly JSON without comments:\n{\n  "project": "Project name",\n  "useCases": [\n    {\n      "id": "uc1",\n      "name": "Use case name",\n      "description": "Use case logic description",\n      "tasks": [\n        {\n          "id": "t1",\n          "title": "Task title",\n          "type": "business or design or tech",\n          "description": "What needs to be done",\n          "source": "Source filename"\n        }\n      ]\n    }\n  ]\n}\nClassify tasks: business = business analysis, design = UI/UX design, tech = backend/API/DB.' },
         { role: 'user', content: combined }
       ],
       response_format: { type: 'json_object' }
@@ -59,7 +59,7 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, function() {
   console.log('Server running on port ' + PORT);
   console.log('OPENAI_API_KEY present:', !!process.env.OPENAI_API_KEY);
 });
